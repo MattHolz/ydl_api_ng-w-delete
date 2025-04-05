@@ -612,6 +612,87 @@ async def update_programmation_by_id(response: Response, id, body=Body(...), tok
 
     return updated_programmation.get()
 
+
+###
+# File Management
+###
+
+@app.delete(__cm.get_app_params().get('_api_route_download') + "/files/{filename:path}")
+async def delete_file(response: Response, filename: str = Path(...), token=None):
+    param_token = unquote(token) if token is not None else None
+    user = __cm.is_user_permitted_by_token(param_token)
+
+    if user is False:
+        response.status_code = 401
+        return
+
+    # Get the absolute path to the downloads folder
+    downloads_path = os.path.abspath("./downloads")
+    file_path = os.path.abspath(os.path.join("./downloads", filename))
+    
+    # Verify the file is in the downloads directory (security check)
+    if not file_path.startswith(downloads_path):
+        response.status_code = 403
+        return {"error": "Access denied: Can only delete files in the downloads directory"}
+    
+    # Check if file exists
+    if not os.path.isfile(file_path):
+        response.status_code = 404
+        return {"error": "File not found"}
+    
+    try:
+        os.remove(file_path)
+        return {"status": "success", "file": filename}
+    except Exception as e:
+        response.status_code = 500
+        return {"error": f"Failed to delete file: {str(e)}"}
+
+@app.get(__cm.get_app_params().get('_api_route_download') + "/files")
+async def list_files(response: Response, directory: str = "", token=None):
+    param_token = unquote(token) if token is not None else None
+    user = __cm.is_user_permitted_by_token(param_token)
+
+    if user is False:
+        response.status_code = 401
+        return
+
+    # Get the absolute path to the downloads folder
+    downloads_path = os.path.abspath("./downloads")
+    target_dir = os.path.abspath(os.path.join(downloads_path, directory))
+    
+    # Verify the target directory is within the downloads directory (security check)
+    if not target_dir.startswith(downloads_path):
+        response.status_code = 403
+        return {"error": "Access denied: Can only list files in the downloads directory"}
+    
+    # Check if directory exists
+    if not os.path.isdir(target_dir):
+        response.status_code = 404
+        return {"error": "Directory not found"}
+    
+    try:
+        files = []
+        for root, dirs, filenames in os.walk(target_dir):
+            rel_path = os.path.relpath(root, downloads_path)
+            rel_path = "" if rel_path == "." else rel_path
+            
+            for filename in filenames:
+                file_path = os.path.join(rel_path, filename)
+                abs_path = os.path.join(root, filename)
+                file_stats = os.stat(abs_path)
+                
+                files.append({
+                    "name": filename,
+                    "path": file_path,
+                    "size": file_stats.st_size,
+                    "modified": datetime.fromtimestamp(file_stats.st_mtime).isoformat()
+                })
+                
+        return {"files": files}
+    except Exception as e:
+        response.status_code = 500
+        return {"error": f"Failed to list files: {str(e)}"}
+
 if __name__ == '__main__':
     uvicorn.run(app, host=__cm.get_app_params().get('_listen_ip'), port=__cm.get_app_params().get('_listen_port'),
                 log_config=None)
