@@ -613,6 +613,29 @@ Security features:
 - No authentication required if user management is disabled
 - If user management is enabled, valid token is required
 
+## API Authentication
+
+The API supports token-based authentication. You can set a secure token using the `API_TOKEN` environment variable:
+
+```
+# In docker-compose.yml
+environment:
+  - API_TOKEN=your_secure_token_here
+```
+
+When `API_TOKEN` is set, all API requests must include this token using the `token` query parameter:
+
+```shell
+# Example of authenticated request
+GET {{host}}/download/files?token=your_secure_token_here
+```
+
+Authentication behavior:
+
+- If `API_TOKEN` is set in the environment, all requests must include a matching token
+- If `API_TOKEN` is not set, token authentication is disabled (but user management authentication may still apply)
+- If both `API_TOKEN` and user management are enabled, requests must satisfy both authentication methods
+
 ## Responses status
 
 - `401` : User is not permitted

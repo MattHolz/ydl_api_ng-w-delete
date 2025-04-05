@@ -21,6 +21,8 @@ services:
       - LOG_LEVEL=error
       # Redis will be disable is this value is not false, remember to also change the setting in params.ini file
       - DISABLE_REDIS=false
+      # API token for authentication
+      - API_TOKEN=your_secure_token_here
     networks:
       - ydl_api_ng
 
@@ -35,4 +37,3 @@ services:
 
 networks:
   ydl_api_ng:
-

@@ -159,3 +159,16 @@ Content-Type: application/json
     "recurrence_cron": "00 20 * * *"
   }
 }
+
+# ################## #
+# File Management    #
+# ################## #
+
+### List all files in downloads folder
+GET {{host}}/download/files
+
+### List files in a specific subdirectory
+GET {{host}}/download/files?directory=videos/youtube.com
+
+### Delete a specific file
+DELETE {{host}}/download/files/videos/youtube.com/video_file.mp4

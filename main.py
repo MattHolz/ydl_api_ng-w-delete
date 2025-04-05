@@ -34,6 +34,11 @@ __cm.init_logger(file_name='api.log')
 app = FastAPI()
 enable_redis = False if __cm.get_app_params().get('_enable_redis') is not True else True
 
+# Middleware function to validate API token
+def validate_token(token):
+    if not ydl_api_ng_utils.validate_api_token(token):
+        return False
+    return True
 
 ###
 # Application
@@ -42,11 +47,17 @@ enable_redis = False if __cm.get_app_params().get('_enable_redis') is not True e
 @app.get(__cm.get_app_params().get('_api_route_info'))
 async def info_request(response: Response, token=None):
     param_token = unquote(token) if token is not None else None
+    
+    # Check API token first
+    if not validate_token(param_token):
+        response.status_code = 401
+        return {"error": "Invalid or missing API token"}
+    
+    # Then check user permission if user management is enabled
     user = __cm.is_user_permitted_by_token(param_token)
-
     if user is False:
         response.status_code = 401
-        return
+        return {"error": "User not permitted"}
 
     return {
         'ydl_engine': 'yt-dlp',
@@ -79,6 +90,11 @@ async def download_request(response: Response, background_tasks: BackgroundTasks
     param_token = unquote(token) if token is not None else None
     param_presets = unquote(presets).split(',') if presets is not None else None
 
+    # Check API token first
+    if not validate_token(param_token):
+        response.status_code = 401
+        return {"error": "Invalid or missing API token"}
+
     dm = download_manager.DownloadManager(__cm, param_url, param_presets, param_token)
 
     user = __cm.is_user_permitted_by_token(param_token)
@@ -109,11 +125,16 @@ async def download_request(response: Response, background_tasks: BackgroundTasks
     param_url = unquote(url)
     param_token = unquote(token) if token is not None else None
 
+    # Check API token first
+    if not validate_token(param_token):
+        response.status_code = 401
+        return {"error": "Invalid or missing API token"}
+
     user = __cm.is_user_permitted_by_token(param_token)
 
     if user is False:
         response.status_code = 401
-        return
+        return {"error": "User not permitted"}
 
     if param_url == '':
         response.status_code = 400
@@ -172,11 +193,16 @@ async def relaunch_failed_download(response: Response, redis_id, token=None):
 
     param_token = unquote(token) if token is not None else None
 
+    # Check API token first
+    if not validate_token(param_token):
+        response.status_code = 401
+        return {"error": "Invalid or missing API token"}
+
     user = __cm.is_user_permitted_by_token(param_token)
 
     if user is False:
         response.status_code = 401
-        return
+        return {"error": "User not permitted"}
 
     for __sub_pu in __pu:
         response.status_code, return_object = __pu.get(__sub_pu).relaunch_failed(redis_id, token)
@@ -195,11 +221,16 @@ async def relaunch_download(response: Response, redis_id, token=None):
 
     param_token = unquote(token) if token is not None else None
 
+    # Check API token first
+    if not validate_token(param_token):
+        response.status_code = 401
+        return {"error": "Invalid or missing API token"}
+
     user = __cm.is_user_permitted_by_token(param_token)
 
     if user is False:
         response.status_code = 401
-        return
+        return {"error": "User not permitted"}
 
     for __sub_pu in __pu:
         response.status_code, return_object = __pu.get(__sub_pu).relaunch_job(redis_id, token)
@@ -218,11 +249,17 @@ async def relaunch_download(response: Response, redis_id, token=None):
 async def extract_info_request(response: Response, url, token=None):
     param_url = unquote(url)
     param_token = unquote(token) if token is not None else None
+    
+    # Check API token first
+    if not validate_token(param_token):
+        response.status_code = 401
+        return {"error": "Invalid or missing API token"}
+    
     user = __cm.is_user_permitted_by_token(param_token)
 
     if user is False:
         response.status_code = 401
-        return
+        return {"error": "User not permitted"}
 
     if param_url == '':
         response.status_code = 400
@@ -620,11 +657,17 @@ async def update_programmation_by_id(response: Response, id, body=Body(...), tok
 @app.delete(__cm.get_app_params().get('_api_route_download') + "/files/{filename:path}")
 async def delete_file(response: Response, filename: str = Path(...), token=None):
     param_token = unquote(token) if token is not None else None
+    
+    # Check API token first
+    if not validate_token(param_token):
+        response.status_code = 401
+        return {"error": "Invalid or missing API token"}
+    
     user = __cm.is_user_permitted_by_token(param_token)
 
     if user is False:
         response.status_code = 401
-        return
+        return {"error": "User not permitted"}
 
     # Get the absolute path to the downloads folder
     downloads_path = os.path.abspath("./downloads")
@@ -650,11 +693,17 @@ async def delete_file(response: Response, filename: str = Path(...), token=None)
 @app.get(__cm.get_app_params().get('_api_route_download') + "/files")
 async def list_files(response: Response, directory: str = "", token=None):
     param_token = unquote(token) if token is not None else None
+    
+    # Check API token first
+    if not validate_token(param_token):
+        response.status_code = 401
+        return {"error": "Invalid or missing API token"}
+    
     user = __cm.is_user_permitted_by_token(param_token)
 
     if user is False:
         response.status_code = 401
-        return
+        return {"error": "User not permitted"}
 
     # Get the absolute path to the downloads folder
     downloads_path = os.path.abspath("./downloads")

@@ -3,6 +3,10 @@
 import yt_dlp
 import yt_dlp.options
 import re
+import logging
+import time
+import optparse
+import os
 
 create_parser = yt_dlp.options.create_parser
 
@@ -41,3 +45,21 @@ def merge_redis_registries(dest, source):
             dest[key] = source[key]
 
     return dest
+
+def validate_api_token(token):
+    """
+    Validates if the provided token matches the API_TOKEN environment variable.
+    Returns True if valid, False otherwise.
+    """
+    expected_token = os.environ.get("API_TOKEN")
+    
+    # If API_TOKEN is not set, no authentication is required
+    if not expected_token:
+        return True
+        
+    # If API_TOKEN is set but no token provided, authentication fails
+    if not token:
+        return False
+        
+    # Compare tokens
+    return token == expected_token
